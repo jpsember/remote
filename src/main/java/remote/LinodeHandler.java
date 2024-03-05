@@ -6,9 +6,6 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import remote.gen.LinodeConfig;
-import remote.gen.LinodeEntry;
-import js.app.CmdLineArgs;
 import js.base.BaseObject;
 import js.base.DateTimeTools;
 import js.base.SystemCall;
@@ -17,6 +14,8 @@ import js.json.JSList;
 import js.json.JSMap;
 import js.webtools.RemoteManager;
 import js.webtools.gen.RemoteEntityInfo;
+import remote.gen.LinodeConfig;
+import remote.gen.RemoteEntry;
 
 public class LinodeHandler extends BaseObject implements RemoteHandler {
 
@@ -26,10 +25,7 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
   }
 
   @Override
-  public void create(CmdLineArgs a, String entityLabel, String imageLabel) {
-    var gpu = a.nextArgIf("gpu");
-    if (gpu)
-      todo("support gpu");
+  public void entityCreate(String entityLabel, String imageLabel) {
 
     var m = map();
     m //
@@ -50,12 +46,12 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
   }
 
   @Override
-  public JSMap listEntities() {
+  public JSMap entityList() {
     return listEntities(false);
   }
 
   @Override
-  public JSMap listEntitiesDetailed() {
+  public JSMap entityListDetailed() {
     return listEntities(true);
   }
 
@@ -63,20 +59,20 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
     var m2 = map();
     var m = labelToIdMap();
     for (var m3 : m.values()) {
-      var label = m3.label();
+      var label = m3.name();
       m2.put(label, displayLinodeInfo(m3, detailed));
     }
     return m2;
   }
 
-  private JSMap displayLinodeInfo(LinodeEntry m3, boolean detail) {
+  private JSMap displayLinodeInfo(RemoteEntry m3, boolean detail) {
     if (detail)
       return m3.toJson();
-    return m3.toJson().remove("linode_info");
+    return m3.toJson().remove("host_info");
   }
 
   @Override
-  public void delete(String label) {
+  public void entityDelete(String label) {
     int id = getLinodeId(label, true);
     callLinode("DELETE", "linode/instances/" + id);
     verifyOk();
@@ -84,14 +80,14 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
   }
 
   @Override
-  public RemoteEntityInfo select(String label) {
+  public RemoteEntityInfo entitySelect(String label) {
     var ent = getLinodeInfo(label, true);
     waitUntilRunning(ent);
     createSSHScript(ent);
 
     var b = RemoteEntityInfo.newBuilder();
     b.label(label) //
-        .url(ent.ipAddr()) //
+        .url(ent.url()) //
         .user("root") //
         .projectDir(new File("/root"));
     ;
@@ -99,7 +95,7 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
   }
 
   @Override
-  public void createImage(String imageLabel) {
+  public void imageCreate(String imageLabel) {
     var v = RemoteManager.SHARED_INSTANCE;
     var ent = v.activeEntity();
     var id = getLinodeId(ent.label(), true);
@@ -130,10 +126,15 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
     waitUntilImageAvailable(imageLabel);
   }
 
+  @Override
+  public void imageDelete(String name) {
+    throw notSupported("imageDelete", name);
+  }
+
   private static final String IMAGE_DESCRIPTION = "created by dev 'remote' command";
 
   @Override
-  public JSList getImagesList() {
+  public JSList imageList() {
     var lst = callLinode("GET", "images").getList("data");
     // Suppress all images not created by this tool
     var out = list();
@@ -194,10 +195,10 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
     return mConfig;
   }
 
-  private void waitUntilRunning(LinodeEntry ent2) {
+  private void waitUntilRunning(RemoteEntry ent2) {
     long startTime = 0;
     long delay = 0;
-    var label = ent2.label();
+    var label = ent2.name();
 
     while (true) {
       if (startTime != 0)
@@ -212,7 +213,7 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
       // Discard cached linode info, to force update
       discardLinodeInfo();
       var ent = getLinode(label);
-      var stat = ent.linodeInfo().opt("status", "");
+      var stat = ent.hostInfo().opt("status", "");
       if (stat.isEmpty())
         badState("no status found for entry:", INDENT, ent);
       if (stat.equals("running"))
@@ -220,16 +221,16 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
     }
   }
 
-  private void createSSHScript(LinodeEntry ent) {
+  private void createSSHScript(RemoteEntry ent) {
     StringBuilder sb = new StringBuilder();
     sb.append("#!/usr/bin/env bash\n");
     sb.append("echo \"Connecting to: ");
-    sb.append(ent.label());
+    sb.append(ent.name());
     sb.append("\"\n");
     sb.append("ssh ");
     sb.append("root");
     sb.append("@");
-    sb.append(ent.ipAddr());
+    sb.append(ent.url());
     sb.append(" -oStrictHostKeyChecking=no");
     sb.append(" $@");
     sb.append('\n');
@@ -288,7 +289,7 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
     return mSysCallOutput;
   }
 
-  private LinodeEntry getLinodeInfo(String label, boolean mustExist) {
+  private RemoteEntry getLinodeInfo(String label, boolean mustExist) {
     var m = getLinode(label);
     if (m == null) {
       if (mustExist)
@@ -302,10 +303,10 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
     var m = getLinodeInfo(label, mustExist);
     if (m == null)
       return 0;
-    return m.id();
+    return m.hostInfo().getInt("id");
   }
 
-  private LinodeEntry getLinode(String label) {
+  private RemoteEntry getLinode(String label) {
     return labelToIdMap().get(label);
   }
 
@@ -313,30 +314,30 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
     mLinodeMap = null;
   }
 
-  private Map<String, LinodeEntry> labelToIdMap() {
+  private Map<String, RemoteEntry> labelToIdMap() {
     if (mLinodeMap == null) {
+      // https://www.linode.com/docs/api/linode-instances/#linodes-list
       var mout = callLinode("GET", "linode/instances");
       verifyOk();
-      var mp = new HashMap<String, LinodeEntry>();
+      var mp = new HashMap<String, RemoteEntry>();
       var nodes = mout.getList("data");
       for (var m2 : nodes.asMaps()) {
-        var ent = LinodeEntry.newBuilder();
-        ent.linodeInfo(m2);
+        var ent = RemoteEntry.newBuilder();
+        ent.hostInfo(m2);
         var ipv4 = m2.getList("ipv4");
         if (ipv4.size() != 1)
           badArg("unexpected ipv4:", ipv4, INDENT, m2);
-        ent.id(m2.getInt("id")) //
-            .label(m2.get("label")) //
-            .ipAddr(ipv4.getString(0)) //
+        ent.name(m2.get("label")) //
+            .url(ipv4.getString(0)) //
         ;
-        mp.put(ent.label(), ent.build());
+        mp.put(ent.name(), ent.build());
       }
       mLinodeMap = mp;
     }
     return mLinodeMap;
   }
 
-  private Map<String, LinodeEntry> mLinodeMap;
+  private Map<String, RemoteEntry> mLinodeMap;
   private LinodeConfig mConfig;
   private JSList mErrors;
   private JSMap mSysCallOutput;

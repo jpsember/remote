@@ -70,21 +70,21 @@ public class RemoteOper extends AppOper {
           imageLabel = parseLabel(a);
         }
 
-        if (handler().listEntities().containsKey(entityLabel))
+        if (handler().entityList().containsKey(entityLabel))
           setError("entity already exists:", entityLabel);
-        handler().create(a, entityLabel, imageLabel);
-        handler().select(entityLabel);
+        handler().entityCreate(entityLabel, imageLabel);
+        handler().entitySelect(entityLabel);
       }
         break;
       case "list":
-        pr(handler().listEntities());
+        pr(handler().entityList());
         break;
       case "details":
-        pr(handler().listEntitiesDetailed());
+        pr(handler().entityListDetailed());
         break;
       case "delete": {
         var label = parseLabel(a);
-        handler().delete(label);
+        handler().entityDelete(label);
         if (mgr.info().activeEntity() != null && mgr.info().activeEntity().label().equals(label))
           mgr.infoEdit().activeEntity(null);
         mgr.flush();
@@ -92,18 +92,18 @@ public class RemoteOper extends AppOper {
         break;
       case "select": {
         var label = parseLabel(a);
-        var info = handler().select(label);
+        var info = handler().entitySelect(label);
         mgr.infoEdit().activeEntity(info);
         mgr.flush();
       }
         break;
       case "createimage": {
         var imageLabel = parseLabel(a);
-        handler().createImage(imageLabel);
+        handler().imageCreate(imageLabel);
       }
         break;
       case "images":
-        pr(handler().getImagesList());
+        pr(handler().imageList());
         break;
       }
     }

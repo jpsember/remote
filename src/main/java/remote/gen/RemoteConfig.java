@@ -5,16 +5,10 @@ import js.json.JSMap;
 
 public class RemoteConfig implements AbstractData {
 
-  public String notUsedYet() {
-    return mNotUsedYet;
-  }
-
   @Override
   public Builder toBuilder() {
     return new Builder(this);
   }
-
-  protected static final String _0 = "not_used_yet";
 
   @Override
   public String toString() {
@@ -24,7 +18,6 @@ public class RemoteConfig implements AbstractData {
   @Override
   public JSMap toJson() {
     JSMap m = new JSMap();
-    m.putUnsafe(_0, mNotUsedYet);
     return m;
   }
 
@@ -39,7 +32,6 @@ public class RemoteConfig implements AbstractData {
   }
 
   private RemoteConfig(JSMap m) {
-    mNotUsedYet = m.opt(_0, "");
   }
 
   public static Builder newBuilder() {
@@ -55,8 +47,6 @@ public class RemoteConfig implements AbstractData {
     RemoteConfig other = (RemoteConfig) object;
     if (other.hashCode() != hashCode())
       return false;
-    if (!(mNotUsedYet.equals(other.mNotUsedYet)))
-      return false;
     return true;
   }
 
@@ -65,19 +55,17 @@ public class RemoteConfig implements AbstractData {
     int r = m__hashcode;
     if (r == 0) {
       r = 1;
-      r = r * 37 + mNotUsedYet.hashCode();
       m__hashcode = r;
     }
     return r;
   }
 
-  protected String mNotUsedYet;
   protected int m__hashcode;
 
   public static final class Builder extends RemoteConfig {
 
     private Builder(RemoteConfig m) {
-      mNotUsedYet = m.mNotUsedYet;
+
     }
 
     @Override
@@ -94,13 +82,8 @@ public class RemoteConfig implements AbstractData {
     @Override
     public RemoteConfig build() {
       RemoteConfig r = new RemoteConfig();
-      r.mNotUsedYet = mNotUsedYet;
-      return r;
-    }
 
-    public Builder notUsedYet(String x) {
-      mNotUsedYet = (x == null) ? "" : x;
-      return this;
+      return r;
     }
 
   }
@@ -108,7 +91,6 @@ public class RemoteConfig implements AbstractData {
   public static final RemoteConfig DEFAULT_INSTANCE = new RemoteConfig();
 
   private RemoteConfig() {
-    mNotUsedYet = "";
   }
 
 }
