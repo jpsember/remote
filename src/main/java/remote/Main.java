@@ -4,11 +4,12 @@ import static js.base.Tools.*;
 
 import js.app.App;
 
-public class Remote extends App {
+public class Main extends App {
 
   public static void main(String[] args) {
     loadTools();
-    Remote app = new Remote();
+    args = "aws create foo".split(" ");
+    Main app = new Main();
     app.startApplication(args);
     app.exitWithReturnCode();
   }

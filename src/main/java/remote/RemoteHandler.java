@@ -1,8 +1,10 @@
 package remote;
 
+import java.util.Map;
+
 import js.json.JSList;
-import js.json.JSMap;
 import js.webtools.gen.RemoteEntityInfo;
+import remote.gen.RemoteEntry;
 
 public interface RemoteHandler {
 
@@ -21,10 +23,7 @@ public interface RemoteHandler {
    */
   void entityCreate(String entityName, String imageName);
 
-  
-  JSMap entityList();
-
-  JSMap entityListDetailed();
+  Map<String, RemoteEntry> entityList();
 
   void entityDelete(String name);
 

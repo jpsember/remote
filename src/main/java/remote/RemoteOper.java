@@ -50,6 +50,13 @@ public class RemoteOper extends AppOper {
   @Override
   public void perform() {
     var mgr = RemoteManager.SHARED_INSTANCE;
+
+    if (false && alert("experiment")) {
+      var h = (AWSHandler)sHandlerMap.get("aws");
+     pr( h.describeKeyPairs());
+      return;
+    }
+
     var a = cmdLineArgs();
     while (a.hasNextArg()) {
       var cmd = a.nextArg();
@@ -77,10 +84,10 @@ public class RemoteOper extends AppOper {
       }
         break;
       case "list":
-        pr(handler().entityList());
+        showList(false);
         break;
       case "details":
-        pr(handler().entityListDetailed());
+        showList(true);
         break;
       case "delete": {
         var label = parseLabel(a);
@@ -107,6 +114,18 @@ public class RemoteOper extends AppOper {
         break;
       }
     }
+  }
+
+  private void showList(boolean detailed) {
+    var mp = handler().entityList();
+    var jsonOut = map();
+    for (var ent : mp.values()) {
+      var entJson = ent.toJson();
+      if (!detailed)
+        entJson.remove("host_info");
+      jsonOut.put(ent.name(), entJson);
+    }
+    pr(jsonOut);
   }
 
   private String parseLabel(CmdLineArgs a) {
@@ -148,6 +167,7 @@ public class RemoteOper extends AppOper {
 
   static {
     RemoteOper.registerHandler(new LinodeHandler());
+    RemoteOper.registerHandler(new AWSHandler());
   }
 
 }

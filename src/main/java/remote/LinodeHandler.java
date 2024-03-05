@@ -46,29 +46,8 @@ public class LinodeHandler extends BaseObject implements RemoteHandler {
   }
 
   @Override
-  public JSMap entityList() {
-    return listEntities(false);
-  }
-
-  @Override
-  public JSMap entityListDetailed() {
-    return listEntities(true);
-  }
-
-  private JSMap listEntities(boolean detailed) {
-    var m2 = map();
-    var m = labelToIdMap();
-    for (var m3 : m.values()) {
-      var label = m3.name();
-      m2.put(label, displayLinodeInfo(m3, detailed));
-    }
-    return m2;
-  }
-
-  private JSMap displayLinodeInfo(RemoteEntry m3, boolean detail) {
-    if (detail)
-      return m3.toJson();
-    return m3.toJson().remove("host_info");
+  public Map<String, RemoteEntry> entityList() {
+    return labelToIdMap();
   }
 
   @Override
