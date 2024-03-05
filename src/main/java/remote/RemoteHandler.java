@@ -3,17 +3,22 @@ package remote;
 import java.util.List;
 import java.util.Map;
 
+import js.base.BaseObject;
 import js.json.JSList;
 import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.KeyPairEntry;
 import remote.gen.RemoteEntry;
+import static js.base.Tools.*;
 
-public interface RemoteHandler {
+public abstract class RemoteHandler extends BaseObject {
 
   /**
    * The name of the handler (e.g. aws, linode)
    */
-  String name();
+  @Override
+  protected String supplyName() {
+    throw notSupported();
+  }
 
   /**
    * Create a remote entity
@@ -23,22 +28,40 @@ public interface RemoteHandler {
    * @param imageName
    *          if non empty, the name of an image to create it with
    */
-  void entityCreate(String entityName, String imageName);
+  public void entityCreate(String entityName, String imageName) {
+    throw notSupported();
+  }
 
-  Map<String, RemoteEntry> entityList();
+  public Map<String, RemoteEntry> entityList() {
+    throw notSupported();
+  }
 
-  void entityDelete(String name);
+  public void entityDelete(String name) {
+    throw notSupported();
+  }
 
-  RemoteEntityInfo entitySelect(String name);
+  public RemoteEntityInfo entitySelect(String name) {
+    throw notSupported();
+  }
 
-  void imageCreate(String name);
+  public void imageCreate(String name) {
+    throw notSupported();
+  }
 
-  void imageDelete(String name);
+  public void imageDelete(String name) {
+    throw notSupported();
+  }
 
-  JSList imageList();
+  public JSList imageList() {
+    throw notSupported();
+  }
 
-  List<KeyPairEntry> keyPairList();
-  
-  void importKeyPair(String name, String key);
-  
+  public List<KeyPairEntry> keyPairList() {
+    throw notSupported();
+  }
+
+  public void importKeyPair(String name, String key) {
+    throw notSupported();
+  }
+
 }

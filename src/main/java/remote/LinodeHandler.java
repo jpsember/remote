@@ -16,10 +16,10 @@ import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.LinodeConfig;
 import remote.gen.RemoteEntry;
 
-public class LinodeHandler extends AbstractRemoteHandler {
+public class LinodeHandler extends RemoteHandler {
 
   @Override
-  protected String supplyName() {
+  protected final String supplyName() {
     return "linode";
   }
 

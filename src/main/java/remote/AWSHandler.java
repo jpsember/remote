@@ -13,14 +13,14 @@ import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.KeyPairEntry;
 import remote.gen.RemoteEntry;
 
-public class AWSHandler extends AbstractRemoteHandler {
+public class AWSHandler extends RemoteHandler {
 
   // The handler should use the aws ec2 CLI, invoked via "aws ec2"
 
   // https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Using_Endpoints.html
 
   @Override
-  protected String supplyName() {
+  protected final String supplyName() {
     return "aws";
   }
 
@@ -241,6 +241,15 @@ public class AWSHandler extends AbstractRemoteHandler {
   @Override
   public List<KeyPairEntry> keyPairList() {
 
+    
+    if(alert("attempting to use web api instead of aws cli")) {
+    
+    
+    
+    }
+    
+    
+    
     // https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-key-pairs.html
     ec2();
     arg("describe-key-pairs");

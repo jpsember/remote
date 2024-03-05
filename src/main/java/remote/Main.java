@@ -8,7 +8,8 @@ public class Main extends App {
 
   public static void main(String[] args) {
     loadTools();
-    args = "aws create foo".split(" ");
+    if (false && alert("using experimental args"))
+      args = "aws create foo".split(" ");
     Main app = new Main();
     app.startApplication(args);
     app.exitWithReturnCode();
