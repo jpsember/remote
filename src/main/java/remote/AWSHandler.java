@@ -2,16 +2,18 @@ package remote;
 
 import static js.base.Tools.*;
 
+import java.util.List;
 import java.util.Map;
 
-import js.base.BaseObject;
 import js.base.SystemCall;
+import js.data.DataUtil;
 import js.json.JSList;
 import js.json.JSMap;
 import js.webtools.gen.RemoteEntityInfo;
+import remote.gen.KeyPairEntry;
 import remote.gen.RemoteEntry;
 
-public class AWSHandler extends BaseObject implements RemoteHandler {
+public class AWSHandler extends AbstractRemoteHandler {
 
   // The handler should use the aws ec2 CLI, invoked via "aws ec2"
 
@@ -48,19 +50,42 @@ public class AWSHandler extends BaseObject implements RemoteHandler {
     throw notFinished();
   }
 
-  public JSList describeKeyPairs() {
-    // https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-key-pairs.html
-    var sc = systemCall();
-    sc.arg("/usr/local/bin/aws", "ec2");
-    sc.arg("describe-key-pairs");
-    sc.assertSuccess();
-    return new JSMap(sc.systemOut()).getList("KeyPairs");
-  }
-
   private SystemCall systemCall() {
+    mSc = null;
+    scMap = null;
     var sc = new SystemCall();
     sc.setVerbose(verbose());
-    return sc;
+    mSc = sc;
+    return sc();
+  }
+
+  private SystemCall ec2() {
+    systemCall();
+    sc().arg("/usr/local/bin/aws", "ec2");
+    return sc();
+  }
+
+  private SystemCall sc() {
+    if (mSc == null)
+      systemCall();
+    return mSc;
+  }
+
+  private SystemCall arg(Object... argumentObjects) {
+    return sc().arg(argumentObjects);
+  }
+
+  private JSMap scOut() {
+    if (scMap == null) {
+      var sc = sc();
+      if (sc.exitCode() != 0) {
+        alert("got exit code", sc.exitCode(), INDENT, sc.systemErr());
+      }
+      sc.assertSuccess();
+      scMap = new JSMap(sc.systemOut());
+    }
+    return scMap;
+
   }
 
   @Override
@@ -69,19 +94,17 @@ public class AWSHandler extends BaseObject implements RemoteHandler {
     if (mEntityMap == null) {
 
       // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-instances.html
-      var sc = systemCall();
-      sc.arg("/usr/local/bin/aws", "ec2");
-      sc.arg("describe-instances");
+      ec2();
+      arg("describe-instances");
 
       // sc.arg("--dry-run");
 
-      pr(sc.systemOut());
-      if (sc.exitCode() != 0) {
-        alert("got exit code", sc.exitCode(), INDENT, sc.systemErr());
+      var res = scOut().getList("Reservations");
+      var inst = list();
+      if (res.nonEmpty()) {
+        checkArgument(res.size() == 1);
+        inst = res.getMap(0).getList("Instances");
       }
-      var res = new JSMap(sc.systemOut()).getList("Reservations");
-      checkArgument(res.size() == 1);
-      var inst = res.getMap(0).getList("Instances");
 
       Map<String, RemoteEntry> mp = hashMap();
       for (var m : inst.asMaps()) {
@@ -91,7 +114,7 @@ public class AWSHandler extends BaseObject implements RemoteHandler {
         // Look for user data
         {
           var um = m.optJSMap("UserData");
-
+          pr(um);
         }
         if (ent.name().isEmpty()) {
           alert("no name found for instance:", INDENT, m);
@@ -166,17 +189,17 @@ public class AWSHandler extends BaseObject implements RemoteHandler {
   //      log("Errors occurred in the system call:", INDENT, out);
   //    return output();
   //  }
-
-  private boolean verifyOk() {
-    var errors = mErrors;
-    if (!errors.isEmpty())
-      badState("Errors in system call!", INDENT, errors);
-    return true;
-  }
-
-  private JSMap output() {
-    return mSysCallOutput;
-  }
+  //
+  //  private boolean verifyOk() {
+  //    var errors = mErrors;
+  //    if (!errors.isEmpty())
+  //      badState("Errors in system call!", INDENT, errors);
+  //    return true;
+  //  }
+  //
+  //  private JSMap output() {
+  //    return mSysCallOutput;
+  //  }
   //
   //  private RemoteEntry getLinodeInfo(String label, boolean mustExist) {
   //    var m = getLinode(label);
@@ -215,8 +238,42 @@ public class AWSHandler extends BaseObject implements RemoteHandler {
   //    return mEntityMap;
   //  }
 
-  private Map<String, RemoteEntry> mEntityMap;
-  private JSList mErrors;
-  private JSMap mSysCallOutput;
+  @Override
+  public List<KeyPairEntry> keyPairList() {
 
+    // https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-key-pairs.html
+    ec2();
+    arg("describe-key-pairs");
+
+    var jsonList = scOut().getList("KeyPairs");
+
+    List<KeyPairEntry> lst = arrayList();
+    for (var m : jsonList.asMaps()) {
+      var ent = KeyPairEntry.newBuilder();
+      ent.name(m.get("KeyName"));
+      ent.hostInfo(m);
+      lst.add(ent.build());
+    }
+    return lst;
+  }
+
+  @Override
+  public void importKeyPair(String name, String key) {
+    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/import-key-pair.html
+    ec2();
+    arg("import-key-pair");
+    arg("--key-name", name);
+    var keyBase64 = DataUtil.encodeBase64(key.getBytes());
+
+    arg("--public-key-material", keyBase64);
+    pr("base64:", keyBase64);
+    //arg("--dry-run");
+    pr(scOut());
+  }
+
+  private Map<String, RemoteEntry> mEntityMap;
+  //  private JSList mErrors;
+  //  private JSMap mSysCallOutput;
+  private SystemCall mSc;
+  private JSMap scMap;
 }

@@ -51,9 +51,16 @@ public class RemoteOper extends AppOper {
   public void perform() {
     var mgr = RemoteManager.SHARED_INSTANCE;
 
-    if (false && alert("experiment")) {
-      var h = (AWSHandler)sHandlerMap.get("aws");
-     pr( h.describeKeyPairs());
+    if (true && alert("experiment")) {
+      setHandler("aws");
+      var h = handler();
+
+      if (false) {
+      var pubKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDIdpbQF+FOu0s6OBT0IivYKyjszCPSN9is5IVpBQ6CHX4ZVYeYowhVxLsnwB4RWj/t8sEsQTGqD9V0NscdGongOST6344RcVmAuRYPaOUY9LqqKQnojrYtCWGfMDAmjadtUJqfpxhs2GwFgSS4u9CsATjAhoso5gpk4RdBTJghck1qLGMFeEg0pTUpOJ6Rq8NEjmlLrLVHi1obgLhuZANgqJcNhrfWiUPKQXoMXNXWJDkqMdONxphJe7Fv/y6GRI2tYktElKS68XQ7QVA+/PpNDUcW5KNHS9uf1Az7jb8PuWYzjn6rPpF4O8fnbdxfsK2X1HXN9vn+I8XNS0Mkq/cL Jeff's primary public RSA key";
+      h.importKeyPair("jeff", pubKey);
+      }
+      
+      pr(h.keyPairList());
       return;
     }
 

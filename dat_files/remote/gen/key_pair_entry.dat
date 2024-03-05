@@ -1,0 +1,4 @@
+class {
+  string name;
+  JSMap host_info;
+}

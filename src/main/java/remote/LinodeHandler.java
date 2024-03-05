@@ -6,7 +6,6 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import js.base.BaseObject;
 import js.base.DateTimeTools;
 import js.base.SystemCall;
 import js.file.Files;
@@ -17,7 +16,7 @@ import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.LinodeConfig;
 import remote.gen.RemoteEntry;
 
-public class LinodeHandler extends BaseObject implements RemoteHandler {
+public class LinodeHandler extends AbstractRemoteHandler {
 
   @Override
   protected String supplyName() {

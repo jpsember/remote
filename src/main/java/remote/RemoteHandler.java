@@ -1,9 +1,11 @@
 package remote;
 
+import java.util.List;
 import java.util.Map;
 
 import js.json.JSList;
 import js.webtools.gen.RemoteEntityInfo;
+import remote.gen.KeyPairEntry;
 import remote.gen.RemoteEntry;
 
 public interface RemoteHandler {
@@ -35,4 +37,8 @@ public interface RemoteHandler {
 
   JSList imageList();
 
+  List<KeyPairEntry> keyPairList();
+  
+  void importKeyPair(String name, String key);
+  
 }
