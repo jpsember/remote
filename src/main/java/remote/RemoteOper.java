@@ -51,7 +51,7 @@ public class RemoteOper extends AppOper {
   public void perform() {
     var mgr = RemoteManager.SHARED_INSTANCE;
 
-    if (true && alert("experiment")) {
+    if (false && alert("experiment")) {
 
       todo("Support selecting an active remote");
 

@@ -200,6 +200,7 @@ public class LinodeHandler extends RemoteHandler {
   }
 
   private void createSSHScript(RemoteEntry ent) {
+    todo("This code is duplicated in AWSHandler");
     StringBuilder sb = new StringBuilder();
     sb.append("#!/usr/bin/env bash\n");
     sb.append("echo \"Connecting to: ");

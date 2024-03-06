@@ -2,6 +2,7 @@ package remote;
 
 import static js.base.Tools.*;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -9,6 +10,7 @@ import java.util.TreeMap;
 import js.base.DateTimeTools;
 import js.base.SystemCall;
 import js.data.DataUtil;
+import js.file.Files;
 import js.json.JSMap;
 import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.KeyPairEntry;
@@ -59,7 +61,6 @@ public class AWSHandler extends RemoteHandler {
         break;
     }
     checkState(nonEmpty(instanceId), "no InstanceId returned");
-    todo("wait until instance has started");
     var startTime = 0L;
     //var prevState = "";
     while (true) {
@@ -118,10 +119,42 @@ public class AWSHandler extends RemoteHandler {
   }
 
   @Override
-  public RemoteEntityInfo entitySelect(String label) {
-    throw notFinished();
+  public RemoteEntityInfo entitySelect(String name) {
+    var ent = entityWithName(name);
+    checkState(ent != null, "no entity found with name:", name);
+
+    createSSHScript(ent);
+
+    todo("Is RemoteEntityInfo extraneous?  Vs RemoteInfo?");
+    var b = RemoteEntityInfo.newBuilder();
+    b.label(name) //
+        .url(ent.url()) //
+        .user("root") //
+        .projectDir(new File("/root"));
+    ;
+    return b;
   }
 
+  private void createSSHScript(RemoteEntry ent) {
+    todo("This code is duplicated in LinodeHandler");
+    StringBuilder sb = new StringBuilder();
+    sb.append("#!/usr/bin/env bash\n");
+    sb.append("echo \"Connecting to: ");
+    sb.append(ent.name());
+    sb.append("\"\n");
+    sb.append("ssh ");
+    sb.append("root");
+    sb.append("@");
+    sb.append(ent.url());
+    sb.append(" -oStrictHostKeyChecking=no");
+    sb.append(" $@");
+    sb.append('\n');
+    File f = new File(Files.binDirectory(), "sshe");
+    var fl = Files.S;
+    fl.writeString(f, sb.toString());
+    fl.chmod(f, 755);
+  }
+  
   @Override
   public List<KeyPairEntry> keyPairList() {
 
