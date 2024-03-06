@@ -4,7 +4,9 @@ import static js.base.Tools.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
+import js.base.DateTimeTools;
 import js.base.SystemCall;
 import js.data.DataUtil;
 import js.json.JSList;
@@ -75,55 +77,84 @@ public class AWSHandler extends RemoteHandler {
     arg("--count", 1);
     todo("ability to specify key name");
     arg("--key-name", "jeff");
-    if (!alert("NOT storing user data"))
-      arg("--user-data", entityLabel);
+    //if (!alert("NOT storing user data"))
+    arg("--user-data", entityLabel);
     //sc.arg("--dry-run");
 
     pr(scOut());
+    String instanceId = "";
+    var instList = scOut().getList("Instances");
+    for (var m : instList.asMaps()) {
+      instanceId = m.opt("InstanceId", "");
+      if (nonEmpty(instanceId))
+        break;
+    }
+    checkState(nonEmpty(instanceId), "no InstanceId returned");
     todo("wait until instance has started");
-    // Call entityList, and look for one with State:Name:"running"
+    var startTime = 0L;
+    //var prevState = "";
+    while (true) {
+      long curr = System.currentTimeMillis();
+      if (startTime == 0)
+        startTime = curr;
+      else {
+        if (curr - startTime > DateTimeTools.MINUTES(5))
+          throw badState("instance is not 'ready' even after a few minutes!");
+        DateTimeTools.sleepForRealMs(15000);
+      }
+      var mp = getNewIdToEntryMap();
+      var ent = mp.get(instanceId);
+      String state = "";
+      if (ent != null) {
+        state = ent.hostInfo().getMap("State").get("Name");
+      } else
+        throw badState("no entry for instance:", instanceId, "found in map");
+      // if (!state.equals(prevState))
+      pr("...elapsed time:", DateTimeTools.humanDuration(curr - startTime), "state:", state);
+      if (state.equals("running"))
+        break;
+    }
   }
 
   @Override
   public Map<String, RemoteEntry> entityList() {
-
-    if (mEntityMap == null) {
-
-      // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-instances.html
-      ec2();
-      arg("describe-instances");
-
-      Map<String, RemoteEntry> mp = hashMap();
-
-      var inst = list();
-      var res = scOut().getList("Reservations");
-      for (var resElem : res.asMaps()) {
-        inst = resElem.getList("Instances");
-
-        for (var m : inst.asMaps()) {
-          var ent = RemoteEntry.newBuilder();
-          if (!alert("NOT storing hostInfo"))
-            ent.hostInfo(m);
-
-          var instanceId = m.get("InstanceId");
-          var userData = getUserData(instanceId);
-          ent.name(userData);
-          if (nullOrEmpty(userData)) {
-            alert("entity has no userData:", instanceId);
-            continue;
-          }
-          ent.url(m.get("PublicIpAddress"));
-          mp.put(ent.name(), ent.build());
-        }
-      }
-      mEntityMap = mp;
+    Map<String, RemoteEntry> out = new TreeMap<String, RemoteEntry>();
+    for (var val : entityIdToNameMap().values()) {
+      out.put(val.name(), val);
     }
-    return mEntityMap;
+    return out;
   }
 
   @Override
-  public void entityDelete(String label) {
-    throw notFinished();
+  public void entityDelete(String name) {
+    var entry = entityWithName(name); //entityIdToNameMap().get(name);
+    if (entry == null) {
+      throw badArg("no entity found with name:", name);
+    }
+    var instanceId = instanceId(entry);
+    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/terminate-instances.html
+    ec2();
+    arg("terminate-instances");
+    arg("--instance-ids", instanceId);
+    pr(scOut());
+    entityIdToNameMap().remove(instanceId);
+  }
+
+  private RemoteEntry entityWithName(String name) {
+    pr("looking for entity with name:", name);
+    for (var ent : entityIdToNameMap().values()) {
+      pr("name:", ent.name(), "id:", instanceId(ent));
+      if (ent.name().equals(name))
+        return ent;
+    }
+    return null;
+  }
+
+  private String instanceId(RemoteEntry ent) {
+    var id = ent.hostInfo().opt("InstanceId", "");
+    if (nullOrEmpty(id))
+      badArg("entry has no InstanceId:", INDENT, ent);
+    return id;
   }
 
   @Override
@@ -283,33 +314,50 @@ public class AWSHandler extends RemoteHandler {
     return result;
   }
 
-  private Map<String, String> entityIdToNameMap() {
-    if (mEntityIdToNameMap == null) {
-
-      // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-instances.html
-      ec2();
-      arg("describe-instances");
-
-      Map<String, String> idToNameMap = hashMap();
-      var res = scOut().getList("Reservations");
-      for (var resElem : res.asMaps()) {
-        for (var m : resElem.getList("Instances").asMaps()) {
-          var instanceId = m.get("InstanceId");
-          var entityName = getUserData(instanceId);
-          if (nullOrEmpty(entityName)) {
-            alert("instance has no userData:", instanceId);
-            continue;
-          }
-          idToNameMap.put(instanceId, entityName);
-        }
-      }
-      mEntityIdToNameMap = idToNameMap;
+  private Map<String, RemoteEntry> entityIdToNameMap() {
+    if (mIdToEntityMap == null) {
+      mIdToEntityMap = getNewIdToEntryMap();
     }
-    return mEntityIdToNameMap;
+    return mIdToEntityMap;
   }
 
-  private Map<String, String> mEntityIdToNameMap;
-  private Map<String, RemoteEntry> mEntityMap;
+  private Map<String, RemoteEntry> getNewIdToEntryMap() {
+    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-instances.html
+    ec2();
+    arg("describe-instances");
+
+    Map<String, RemoteEntry> idToEntMap = hashMap();
+    var res = scOut().getList("Reservations");
+    for (var resElem : res.asMaps()) {
+      for (var m : resElem.getList("Instances").asMaps()) {
+        var instanceId = m.get("InstanceId");
+        var entityName = getUserData(instanceId);
+        if (nullOrEmpty(entityName)) {
+          alert("instance has no userData:", instanceId);
+          continue;
+        }
+        var b = RemoteEntry.newBuilder();
+        b.name(entityName);
+        b.hostInfo(m);
+        
+        var state = m.optJSMapOrEmpty("State").opt("Name","");
+        if (nullOrEmpty(state)) 
+          continue;
+        
+        var ipAddr = m.opt("PublicIpAddress", "");
+//        if (nullOrEmpty(ipAddr)) {
+//          // A terminated instance 
+//          pr("*** entity has no PublicIpAddress; is it shutting down?", INDENT, scOut());
+//          continue;
+//        }
+        b.url(ipAddr);
+        idToEntMap.put(instanceId, b.build());
+      }
+    }
+    return idToEntMap;
+  }
+
+  private Map<String, RemoteEntry> mIdToEntityMap;
   private SystemCall mSc;
   private JSMap scMap;
 }
