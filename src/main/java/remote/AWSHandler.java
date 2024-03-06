@@ -2,23 +2,24 @@ package remote;
 
 import static js.base.Tools.*;
 
-import java.io.File;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
 import js.base.SystemCall;
 import js.data.DataUtil;
-import js.file.FileException;
-import js.file.Files;
 import js.json.JSList;
 import js.json.JSMap;
 import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.KeyPairEntry;
 import remote.gen.RemoteEntry;
 
+/**
+ * RemoteHandler that wraps the aws cli tool (/usr/local/bin/aws)
+ */
 public class AWSHandler extends RemoteHandler {
+
+  // Viewing instances (in us-west-2a region):  
+  //  https://us-west-2.console.aws.amazon.com/ec2/home?region=us-west-2#Instances:
 
   // The handler should use the aws ec2 CLI, invoked via "aws ec2"
 
@@ -29,51 +30,20 @@ public class AWSHandler extends RemoteHandler {
     return "aws";
   }
 
-  @Override
-  public void entityCreate(String entityLabel, String imageLabel) {
-
-    var sc = new SystemCall();
-    sc.setVerbose(verbose());
-    sc.arg("/usr/local/bin/aws", "ec2");
-
-    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/run-instances.html
-    sc.arg("run-instances");
-    sc.arg("--image-id", "ami-08f7912c15ca96832");
-    sc.arg("--instance-type", "t2.micro");
-    sc.arg("--count", 1);
-    todo("we need to be able to define a key pair");
-    sc.arg("--key-name", "jeff");
-    sc.arg("--user-data", entityLabel);
-
-    sc.arg("--dry-run");
-
-    pr(sc.systemOut());
-    if (sc.exitCode() != 0) {
-      alert("got exit code", sc.exitCode(), INDENT, sc.systemErr());
-    }
-
-    throw notFinished();
-  }
-
-  private SystemCall systemCall() {
+  private SystemCall ec2() {
     mSc = null;
     scMap = null;
     var sc = new SystemCall();
     sc.setVerbose(verbose());
-    sc.alertVerbose();
     mSc = sc;
-    return sc();
-  }
-
-  private SystemCall ec2() {
-    systemCall();
     sc().arg("/usr/local/bin/aws", "ec2");
     return sc();
   }
 
   private SystemCall sc() {
-    if (mSc == null)
-      systemCall();
+    if (mSc == null) {
+      badState("no call to ec2!");
+    }
     return mSc;
   }
 
@@ -83,15 +53,35 @@ public class AWSHandler extends RemoteHandler {
 
   private JSMap scOut() {
     if (scMap == null) {
-      var sc = sc();
+      checkState(mSc != null);
+      var sc = mSc;
       if (sc.exitCode() != 0) {
         alert("got exit code", sc.exitCode(), INDENT, sc.systemErr());
       }
       sc.assertSuccess();
       scMap = new JSMap(sc.systemOut());
+      mSc = null;
     }
     return scMap;
+  }
 
+  @Override
+  public void entityCreate(String entityLabel, String imageLabel) {
+    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/run-instances.html
+    ec2();
+    arg("run-instances");
+    arg("--image-id", imageLabel);
+    arg("--instance-type", "t2.micro");
+    arg("--count", 1);
+    todo("ability to specify key name");
+    arg("--key-name", "jeff");
+    if (!alert("NOT storing user data"))
+      arg("--user-data", entityLabel);
+    //sc.arg("--dry-run");
+
+    pr(scOut());
+    todo("wait until instance has started");
+    // Call entityList, and look for one with State:Name:"running"
   }
 
   @Override
@@ -103,30 +93,28 @@ public class AWSHandler extends RemoteHandler {
       ec2();
       arg("describe-instances");
 
-      // sc.arg("--dry-run");
-
-      var res = scOut().getList("Reservations");
-      var inst = list();
-      if (res.nonEmpty()) {
-        checkArgument(res.size() == 1);
-        inst = res.getMap(0).getList("Instances");
-      }
-
       Map<String, RemoteEntry> mp = hashMap();
-      for (var m : inst.asMaps()) {
-        var ent = RemoteEntry.newBuilder();
-        ent.hostInfo(m);
 
-        // Look for user data
-        {
-          var um = m.optJSMap("UserData");
-          pr(um);
+      var inst = list();
+      var res = scOut().getList("Reservations");
+      for (var resElem : res.asMaps()) {
+        inst = resElem.getList("Instances");
+
+        for (var m : inst.asMaps()) {
+          var ent = RemoteEntry.newBuilder();
+          if (!alert("NOT storing hostInfo"))
+            ent.hostInfo(m);
+
+          var instanceId = m.get("InstanceId");
+          var userData = getUserData(instanceId);
+          ent.name(userData);
+          if (nullOrEmpty(userData)) {
+            alert("entity has no userData:", instanceId);
+            continue;
+          }
+          ent.url(m.get("PublicIpAddress"));
+          mp.put(ent.name(), ent.build());
         }
-        if (ent.name().isEmpty()) {
-          alert("no name found for instance:", INDENT, m);
-          continue;
-        }
-        mp.put(ent.name(), ent.build());
       }
       mEntityMap = mp;
     }
@@ -155,7 +143,15 @@ public class AWSHandler extends RemoteHandler {
 
   @Override
   public JSList imageList() {
-    throw notFinished();
+
+    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-instance-status.html
+    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/run-instances.html
+    ec2();
+    arg("describe-instance-status");
+    var m = scOut();
+    var lst = m.getList("InstanceStatuses");
+    pr(lst);
+    return lst;
   }
   //
   //  private JSMap callLinode(String action, String endpoint) {
@@ -244,88 +240,14 @@ public class AWSHandler extends RemoteHandler {
   //    return mEntityMap;
   //  }
 
-  private void webcall(String action) {
-    systemCall();
-    var sc = sc();
-    sc.arg("curl", //
-        "-s", // suppress progress bar
-        "-H", "Content-Type: application/json" //
-    //   "-H", "Authorization: Bearer " + config().accessToken()
-    );
-    sc.arg("-X", action);
-    mSb = new StringBuilder();
-    mParamCount = 0;
-  }
-
-  private String urlEncode(String expr) {
-    return URLEncoder.encode(expr, StandardCharsets.UTF_8);
-  }
-
-  private void param(String key, String value) {
-    var sb = mSb;
-    sb.append(mParamCount == 0 ? '?' : '&');
-    mParamCount++;
-    sb.append(urlEncode(key));
-    sb.append('=');
-    sb.append(urlEncode(value));
-  }
-
   @Override
   public List<KeyPairEntry> keyPairList() {
-
-    todo("can we use our WebRequest capability, instead of calling curl?");
-    if (alert("attempting to use web api instead of aws cli")) {
-
-      // See https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html
-
-      // and for 'signature version 4 authorization', see https://how.wtf/aws-sigv4-requests-with-curl.html
-
-      webcall("GET");
-      var sc = new SystemCall();
-      sc.setVerbose(verbose());
-
-      sc.arg("curl");
-
-      // suppress progress bar
-      sc.arg("-s");
-
-      // --user "$AWS_ACCESS_KEY_ID":"$AWS_SECRET_ACCESS_KEY"
-      var c = credentials();
-      var def = c.optJSMap("default");
-      if (def == null)
-        badArg("no 'default' entry in ~/.aws/credentials file");
-      
-       sc.arg("--user",def.get("aws_access_key_id")+":"+def.get("aws_secret_access_key"));
-
-       sc.arg("--aws-sigv4","aws:amz:us-west-2:execute-api");
-      // Is GET implied?
-      sc.arg("-X", "GET");
-
-      var sb = mSb;
-      sb.append("https://ec2.amazonaws.com/");
-    //  param("AWSAccessKeyId",def.get("aws_access_key_id"));
-    //  param("AWSSecretAccessKey",def.get("aws_secret_access_key"));
-      param("Action", "DescribeKeyPairs");
-
-      sc.arg(mSb);
-      if (sc.exitCode() != 0) {
-        alert("got exit code", sc.exitCode(), INDENT, sc.systemErr());
-      }
-      sc.assertSuccess();
-      pr(sc.toString());
-
-      pr(sc.systemErr());
-      pr(sc.systemOut());
-      halt();
-      return arrayList();
-    }
 
     // https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-key-pairs.html
     ec2();
     arg("describe-key-pairs");
 
     var jsonList = scOut().getList("KeyPairs");
-
     List<KeyPairEntry> lst = arrayList();
     for (var m : jsonList.asMaps()) {
       var ent = KeyPairEntry.newBuilder();
@@ -343,77 +265,51 @@ public class AWSHandler extends RemoteHandler {
     arg("import-key-pair");
     arg("--key-name", name);
     var keyBase64 = DataUtil.encodeBase64(key.getBytes());
-
     arg("--public-key-material", keyBase64);
-    pr("base64:", keyBase64);
-    //arg("--dry-run");
-    pr(scOut());
+    var result = scOut();
+    pr(result);
   }
 
-  private JSMap credentials() {
-    if (mCred == null)
-      mCred = parseAWSFile(new File(Files.homeDirectory(), ".aws/credentials"));
-    return mCred;
-  }
-
-  private JSMap mCred;
-
-  private JSMap parseAWSFile(File f) {
-    Files.assertExists(f, "aws credentials file");
-    String s = Files.readString(f);
-    List<String> rows = split(s, '\n');
-
-    // Remove any comment lines; we will assume that this is lines that have '#' in them, and
-    // will generate a warning if there are any such lines that don't start with '#'
-    {
-      List<String> filtered = arrayList();
-      for (String row : rows) {
-        row = row.trim();
-        if (nullOrEmpty(row))
-          continue;
-        if (row.contains("#")) {
-          if (!row.startsWith("#")) {
-            alert("Configuration file:", f, "has unexpected '#' character(s)");
-          }
-          continue;
-        }
-        filtered.add(row);
-      }
-      rows = filtered;
-    }
-
-    JSMap result = map();
-
-    try {
-      JSMap currentGroup = null;
-
-      String groupId = null;
-      for (String row : rows) {
-        if (row.startsWith("[")) {
-          checkArgument(row.endsWith("]"));
-          groupId = row.substring(1, row.length() - 1);
-          checkArgument(!result.containsKey(groupId));
-          currentGroup = new JSMap();
-          result.put(groupId, currentGroup);
-          continue;
-        }
-        List<String> words = split(row, '=');
-        checkArgument(words.size() == 2);
-        String key = words.get(0).trim();
-        String value = words.get(1).trim();
-        currentGroup.put(key, value);
-      }
-    } catch (Throwable t) {
-      throw FileException.withCause(t, "Problem parsing configuration file:", f);
-    }
+  private String getUserData(String instanceId) {
+    // See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-api-cli
+    ec2();
+    arg("describe-instance-attribute");
+    arg("--instance-id", instanceId);
+    arg("--attribute", "userData");
+    var m = scOut().getMap("UserData");
+    var result = m.opt("Value", "");
+    if (nonEmpty(result))
+      result = new String(DataUtil.parseBase64(result));
     return result;
   }
 
+  private Map<String, String> entityIdToNameMap() {
+    if (mEntityIdToNameMap == null) {
+
+      // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-instances.html
+      ec2();
+      arg("describe-instances");
+
+      Map<String, String> idToNameMap = hashMap();
+      var res = scOut().getList("Reservations");
+      for (var resElem : res.asMaps()) {
+        for (var m : resElem.getList("Instances").asMaps()) {
+          var instanceId = m.get("InstanceId");
+          var entityName = getUserData(instanceId);
+          if (nullOrEmpty(entityName)) {
+            alert("instance has no userData:", instanceId);
+            continue;
+          }
+          idToNameMap.put(instanceId, entityName);
+        }
+      }
+      mEntityIdToNameMap = idToNameMap;
+    }
+    return mEntityIdToNameMap;
+  }
+
+  private Map<String, String> mEntityIdToNameMap;
   private Map<String, RemoteEntry> mEntityMap;
-  //  private JSList mErrors;
-  //  private JSMap mSysCallOutput;
   private SystemCall mSc;
   private JSMap scMap;
-  private StringBuilder mSb;
-  private int mParamCount;
 }
