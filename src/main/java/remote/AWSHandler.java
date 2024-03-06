@@ -9,7 +9,6 @@ import java.util.TreeMap;
 import js.base.DateTimeTools;
 import js.base.SystemCall;
 import js.data.DataUtil;
-import js.json.JSList;
 import js.json.JSMap;
 import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.KeyPairEntry;
@@ -32,43 +31,13 @@ public class AWSHandler extends RemoteHandler {
     return "aws";
   }
 
-  private SystemCall ec2() {
-    mSc = null;
-    scMap = null;
-    var sc = new SystemCall();
-    sc.setVerbose(verbose());
-    mSc = sc;
-    sc().arg("/usr/local/bin/aws", "ec2");
-    return sc();
-  }
-
-  private SystemCall sc() {
-    if (mSc == null) {
-      badState("no call to ec2!");
-    }
-    return mSc;
-  }
-
-  private SystemCall arg(Object... argumentObjects) {
-    return sc().arg(argumentObjects);
-  }
-
-  private JSMap scOut() {
-    if (scMap == null) {
-      checkState(mSc != null);
-      var sc = mSc;
-      if (sc.exitCode() != 0) {
-        alert("got exit code", sc.exitCode(), INDENT, sc.systemErr());
-      }
-      sc.assertSuccess();
-      scMap = new JSMap(sc.systemOut());
-      mSc = null;
-    }
-    return scMap;
-  }
-
   @Override
-  public void entityCreate(String entityLabel, String imageLabel) {
+  public void entityCreate(String entityName, String imageLabel) {
+    {
+      var ent = entityWithName(entityName);
+      if (ent != null)
+        throw badArg("attempt to create entity with name that already exists:", entityName, INDENT, ent);
+    }
     // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/run-instances.html
     ec2();
     arg("run-instances");
@@ -78,7 +47,7 @@ public class AWSHandler extends RemoteHandler {
     todo("ability to specify key name");
     arg("--key-name", "jeff");
     //if (!alert("NOT storing user data"))
-    arg("--user-data", entityLabel);
+    arg("--user-data", entityName);
     //sc.arg("--dry-run");
 
     pr(scOut());
@@ -106,7 +75,7 @@ public class AWSHandler extends RemoteHandler {
       var ent = mp.get(instanceId);
       String state = "";
       if (ent != null) {
-        state = ent.hostInfo().getMap("State").get("Name");
+        state = entityState(ent);
       } else
         throw badState("no entry for instance:", instanceId, "found in map");
       // if (!state.equals(prevState))
@@ -120,6 +89,13 @@ public class AWSHandler extends RemoteHandler {
   public Map<String, RemoteEntry> entityList() {
     Map<String, RemoteEntry> out = new TreeMap<String, RemoteEntry>();
     for (var val : entityIdToNameMap().values()) {
+      // Entities that have deleted may hang around for an hour or so; their states
+      // will be "terminated".  Omit these from the results.  Also omit any that
+      // have an empty state (which is unexpected).
+      //
+      var s = entityState(val);
+      if (nullOrEmpty(s) || s.equals("terminated"))
+        continue;
       out.put(val.name(), val);
     }
     return out;
@@ -127,10 +103,11 @@ public class AWSHandler extends RemoteHandler {
 
   @Override
   public void entityDelete(String name) {
-    var entry = entityWithName(name); //entityIdToNameMap().get(name);
+    var entry = entityWithName(name);
     if (entry == null) {
       throw badArg("no entity found with name:", name);
     }
+
     var instanceId = instanceId(entry);
     // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/terminate-instances.html
     ec2();
@@ -140,136 +117,10 @@ public class AWSHandler extends RemoteHandler {
     entityIdToNameMap().remove(instanceId);
   }
 
-  private RemoteEntry entityWithName(String name) {
-    pr("looking for entity with name:", name);
-    for (var ent : entityIdToNameMap().values()) {
-      pr("name:", ent.name(), "id:", instanceId(ent));
-      if (ent.name().equals(name))
-        return ent;
-    }
-    return null;
-  }
-
-  private String instanceId(RemoteEntry ent) {
-    var id = ent.hostInfo().opt("InstanceId", "");
-    if (nullOrEmpty(id))
-      badArg("entry has no InstanceId:", INDENT, ent);
-    return id;
-  }
-
   @Override
   public RemoteEntityInfo entitySelect(String label) {
     throw notFinished();
   }
-
-  @Override
-  public void imageCreate(String imageLabel) {
-    throw notFinished();
-  }
-
-  @Override
-  public void imageDelete(String name) {
-    throw notFinished();
-  }
-
-  @Override
-  public JSList imageList() {
-
-    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-instance-status.html
-    // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/run-instances.html
-    ec2();
-    arg("describe-instance-status");
-    var m = scOut();
-    var lst = m.getList("InstanceStatuses");
-    pr(lst);
-    return lst;
-  }
-  //
-  //  private JSMap callLinode(String action, String endpoint) {
-  //    return callAWS(action, endpoint, null);
-  //  }
-  //
-  //  private JSMap callAWS(String action, String endpoint, JSMap m) {
-  //
-  //    mErrors = null;
-  //    mSysCallOutput = null;
-  //
-  //    var sc = new SystemCall();
-  //    sc.setVerbose(verbose());
-  //
-  //    sc.arg("curl", //
-  //        "-s", // suppress progress bar
-  //        "-H", "Content-Type: application/json", //
-  //        "-H", "Authorization: Bearer " + config().accessToken());
-  //    sc.arg("-X", action);
-  //    if (m != null)
-  //      sc.arg("-d", m);
-  //
-  //    sc.arg("https://api.linode.com/v4/" + endpoint);
-  //
-  //    if (sc.exitCode() != 0) {
-  //      alert("got exit code", sc.exitCode(), INDENT, sc.systemErr());
-  //    }
-  //
-  //    sc.assertSuccess();
-  //
-  //    var out = new JSMap(sc.systemOut());
-  //    mSysCallOutput = out;
-  //    log("system call output:", INDENT, out);
-  //
-  //    mErrors = out.optJSListOrEmpty("errors");
-  //    if (!mErrors.isEmpty())
-  //      log("Errors occurred in the system call:", INDENT, out);
-  //    return output();
-  //  }
-  //
-  //  private boolean verifyOk() {
-  //    var errors = mErrors;
-  //    if (!errors.isEmpty())
-  //      badState("Errors in system call!", INDENT, errors);
-  //    return true;
-  //  }
-  //
-  //  private JSMap output() {
-  //    return mSysCallOutput;
-  //  }
-  //
-  //  private RemoteEntry getLinodeInfo(String label, boolean mustExist) {
-  //    var m = getLinode(label);
-  //    if (m == null) {
-  //      if (mustExist)
-  //        badArg("label not found:", label);
-  //      return null;
-  //    }
-  //    return m;
-  //  }
-
-  //  private RemoteEntry getLinode(String label) {
-  //    return labelToIdMap().get(label);
-  //  }
-
-  //  private Map<String, RemoteEntry> labelToIdMap() {
-  //    if (mEntityMap == null) {
-  //      // https://www.linode.com/docs/api/linode-instances/#linodes-list
-  //      var mout = callLinode("GET", "linode/instances");
-  //      verifyOk();
-  //      var mp = new HashMap<String, RemoteEntry>();
-  //      var nodes = mout.getList("data");
-  //      for (var m2 : nodes.asMaps()) {
-  //        var ent = RemoteEntry.newBuilder();
-  //        ent.hostInfo(m2);
-  //        var ipv4 = m2.getList("ipv4");
-  //        if (ipv4.size() != 1)
-  //          badArg("unexpected ipv4:", ipv4, INDENT, m2);
-  //        ent.name(m2.get("label")) //
-  //            .url(ipv4.getString(0)) //
-  //        ;
-  //        mp.put(ent.name(), ent.build());
-  //      }
-  //      mEntityMap = mp;
-  //    }
-  //    return mEntityMap;
-  //  }
 
   @Override
   public List<KeyPairEntry> keyPairList() {
@@ -301,6 +152,31 @@ public class AWSHandler extends RemoteHandler {
     pr(result);
   }
 
+  private String entityState(RemoteEntry entry) {
+    return entry.hostInfo().optJSMapOrEmpty("State").opt("Name", "");
+  }
+
+  /**
+   * Determine which, if any, entity has a particular name
+   */
+  private RemoteEntry entityWithName(String name) {
+    for (var ent : entityIdToNameMap().values()) {
+      if (ent.name().equals(name))
+        return ent;
+    }
+    return null;
+  }
+
+  /**
+   * Determine the InstanceId for an instance
+   */
+  private String instanceId(RemoteEntry ent) {
+    var id = ent.hostInfo().opt("InstanceId", "");
+    if (nullOrEmpty(id))
+      badArg("entry has no InstanceId:", INDENT, ent);
+    return id;
+  }
+
   private String getUserData(String instanceId) {
     // See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-api-cli
     ec2();
@@ -315,9 +191,8 @@ public class AWSHandler extends RemoteHandler {
   }
 
   private Map<String, RemoteEntry> entityIdToNameMap() {
-    if (mIdToEntityMap == null) {
+    if (mIdToEntityMap == null)
       mIdToEntityMap = getNewIdToEntryMap();
-    }
     return mIdToEntityMap;
   }
 
@@ -339,17 +214,10 @@ public class AWSHandler extends RemoteHandler {
         var b = RemoteEntry.newBuilder();
         b.name(entityName);
         b.hostInfo(m);
-        
-        var state = m.optJSMapOrEmpty("State").opt("Name","");
-        if (nullOrEmpty(state)) 
+        var state = entityState(b);
+        if (nullOrEmpty(state))
           continue;
-        
         var ipAddr = m.opt("PublicIpAddress", "");
-//        if (nullOrEmpty(ipAddr)) {
-//          // A terminated instance 
-//          pr("*** entity has no PublicIpAddress; is it shutting down?", INDENT, scOut());
-//          continue;
-//        }
         b.url(ipAddr);
         idToEntMap.put(instanceId, b.build());
       }
@@ -357,7 +225,44 @@ public class AWSHandler extends RemoteHandler {
     return idToEntMap;
   }
 
+  /**
+   * Prepare to make a SystemCall to "aws ec2"
+   */
+  private SystemCall ec2() {
+    mSystemCall = null;
+    mSystemCallJsonResults = null;
+    var sc = new SystemCall();
+    sc.setVerbose(verbose());
+    mSystemCall = sc;
+    sc().arg("/usr/local/bin/aws", "ec2");
+    return sc();
+  }
+
+  private SystemCall sc() {
+    if (mSystemCall == null)
+      badState("no call to ec2!");
+    return mSystemCall;
+  }
+
+  private SystemCall arg(Object... argumentObjects) {
+    return sc().arg(argumentObjects);
+  }
+
+  private JSMap scOut() {
+    if (mSystemCallJsonResults == null) {
+      checkState(mSystemCall != null);
+      var sc = mSystemCall;
+      if (sc.exitCode() != 0) {
+        alert("got exit code", sc.exitCode(), INDENT, sc.systemErr());
+      }
+      sc.assertSuccess();
+      mSystemCallJsonResults = new JSMap(sc.systemOut());
+      mSystemCall = null;
+    }
+    return mSystemCallJsonResults;
+  }
+
   private Map<String, RemoteEntry> mIdToEntityMap;
-  private SystemCall mSc;
-  private JSMap scMap;
+  private SystemCall mSystemCall;
+  private JSMap mSystemCallJsonResults;
 }

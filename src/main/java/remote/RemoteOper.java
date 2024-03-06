@@ -52,16 +52,22 @@ public class RemoteOper extends AppOper {
     var mgr = RemoteManager.SHARED_INSTANCE;
 
     if (true && alert("experiment")) {
+
+      todo("Support selecting an active remote");
+
       setHandler("aws");
       var h = handler();
 
-      if (false) {
-        h.entityCreate("zebra", "ami-08f7912c15ca96832");
+      var instId = "camel";
+
+      if (true) {
+        pr("creating", instId);
+        h.entityCreate(instId, "ami-08f7912c15ca96832");
       }
 
       if (false) {
-        pr("deleting 'foo'");
-        h.entityDelete("foo");
+        pr("deleting", instId);
+        h.entityDelete(instId);
       }
 
       if (false) {
