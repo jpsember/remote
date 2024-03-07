@@ -22,7 +22,7 @@ public class Main extends App {
 
   @Override
   protected void registerOperations() {
-    registerOper(new RemoteOper());
+    registerOper(RemoteOper.SHARED_INSTANCE);
   }
 
 }

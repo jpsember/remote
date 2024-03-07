@@ -1,6 +1,0 @@
-class {
-  string name;        // The name it was created with
-  string url;
-  JSMap host_info;    // information provided by host (e.g. AWS or linode)
-  string user = "root";
-}

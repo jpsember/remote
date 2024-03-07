@@ -11,9 +11,9 @@ import js.base.DateTimeTools;
 import js.base.SystemCall;
 import js.data.DataUtil;
 import js.json.JSMap;
+import js.webtools.RemoteManager;
 import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.KeyPairEntry;
-import remote.gen.RemoteEntry;
 
 /**
  * RemoteHandler that wraps the aws cli tool (/usr/local/bin/aws)
@@ -86,8 +86,8 @@ public class AWSHandler extends RemoteHandler {
   }
 
   @Override
-  public Map<String, RemoteEntry> entityList() {
-    Map<String, RemoteEntry> out = new TreeMap<String, RemoteEntry>();
+  public Map<String, RemoteEntityInfo> entityList() {
+    Map<String, RemoteEntityInfo> out = new TreeMap<String, RemoteEntityInfo>();
     for (var val : entityIdToNameMap().values()) {
       // Entities that have deleted may hang around for an hour or so; their states
       // will be "terminated".  Omit these from the results.  Also omit any that
@@ -96,7 +96,7 @@ public class AWSHandler extends RemoteHandler {
       var s = entityState(val);
       if (nullOrEmpty(s) || s.equals("terminated"))
         continue;
-      out.put(val.name(), val);
+      out.put(val.label(), val);
     }
     return out;
   }
@@ -122,8 +122,6 @@ public class AWSHandler extends RemoteHandler {
     var ent = entityWithName(name);
     checkState(ent != null, "no entity found with name:", name);
 
-    RemoteUtils.createSSHScript(ent);
-
     todo("Is RemoteEntityInfo extraneous?  Vs RemoteInfo?");
     var b = RemoteEntityInfo.newBuilder();
     b.label(name) //
@@ -131,6 +129,9 @@ public class AWSHandler extends RemoteHandler {
         .user("root") //
         .projectDir(new File("/root"));
     ;
+    var mgr = RemoteManager.SHARED_INSTANCE;
+    mgr.infoEdit().activeEntity(b);
+    mgr.createSSHScript();
     return b;
   }
 
@@ -164,16 +165,16 @@ public class AWSHandler extends RemoteHandler {
     pr(result);
   }
 
-  private String entityState(RemoteEntry entry) {
+  private String entityState(RemoteEntityInfo entry) {
     return entry.hostInfo().optJSMapOrEmpty("State").opt("Name", "");
   }
 
   /**
    * Determine which, if any, entity has a particular name
    */
-  private RemoteEntry entityWithName(String name) {
+  private RemoteEntityInfo entityWithName(String name) {
     for (var ent : entityIdToNameMap().values()) {
-      if (ent.name().equals(name))
+      if (ent.label().equals(name))
         return ent;
     }
     return null;
@@ -182,7 +183,7 @@ public class AWSHandler extends RemoteHandler {
   /**
    * Determine the InstanceId for an instance
    */
-  private String instanceId(RemoteEntry ent) {
+  private String instanceId(RemoteEntityInfo ent) {
     var id = ent.hostInfo().opt("InstanceId", "");
     if (nullOrEmpty(id))
       badArg("entry has no InstanceId:", INDENT, ent);
@@ -202,18 +203,18 @@ public class AWSHandler extends RemoteHandler {
     return result;
   }
 
-  private Map<String, RemoteEntry> entityIdToNameMap() {
+  private Map<String, RemoteEntityInfo> entityIdToNameMap() {
     if (mIdToEntityMap == null)
       mIdToEntityMap = getNewIdToEntryMap();
     return mIdToEntityMap;
   }
 
-  private Map<String, RemoteEntry> getNewIdToEntryMap() {
+  private Map<String, RemoteEntityInfo> getNewIdToEntryMap() {
     // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-instances.html
     ec2();
     arg("describe-instances");
 
-    Map<String, RemoteEntry> idToEntMap = hashMap();
+    Map<String, RemoteEntityInfo> idToEntMap = hashMap();
     var res = scOut().getList("Reservations");
     for (var resElem : res.asMaps()) {
       for (var m : resElem.getList("Instances").asMaps()) {
@@ -223,8 +224,8 @@ public class AWSHandler extends RemoteHandler {
           alert("instance has no userData:", instanceId);
           continue;
         }
-        var b = RemoteEntry.newBuilder();
-        b.name(entityName);
+        var b = RemoteEntityInfo.newBuilder();
+        b.label(entityName);
         b.hostInfo(m);
         var state = entityState(b);
         if (nullOrEmpty(state))
@@ -274,7 +275,7 @@ public class AWSHandler extends RemoteHandler {
     return mSystemCallJsonResults;
   }
 
-  private Map<String, RemoteEntry> mIdToEntityMap;
+  private Map<String, RemoteEntityInfo> mIdToEntityMap;
   private SystemCall mSystemCall;
   private JSMap mSystemCallJsonResults;
 }

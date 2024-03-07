@@ -7,7 +7,6 @@ import js.base.BaseObject;
 import js.json.JSList;
 import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.KeyPairEntry;
-import remote.gen.RemoteEntry;
 import static js.base.Tools.*;
 
 public abstract class RemoteHandler extends BaseObject {
@@ -32,7 +31,7 @@ public abstract class RemoteHandler extends BaseObject {
     throw notSupported();
   }
 
-  public Map<String, RemoteEntry> entityList() {
+  public Map<String, RemoteEntityInfo> entityList() {
     throw notSupported();
   }
 
