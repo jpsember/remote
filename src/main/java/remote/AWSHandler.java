@@ -122,7 +122,6 @@ public class AWSHandler extends RemoteHandler {
     var ent = entityWithName(name);
     checkState(ent != null, "no entity found with name:", name);
 
-    todo("Is RemoteEntityInfo extraneous?  Vs RemoteInfo?");
     var b = RemoteEntityInfo.newBuilder();
     b.label(name) //
         .url(ent.url()) //

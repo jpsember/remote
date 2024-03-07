@@ -24,12 +24,9 @@ public class RemoteOper extends AppOper {
 
   @Override
   public String getHelpDescription() {
-    return "manage remote entities, e.g. linode or AWS";
-  }
-  //
-
-  @Override
-  protected void getOperSpecificHelp(BasePrinter b) {
+    var b = new BasePrinter();
+    b.pr("manage remote entities, e.g. linode or AWS");
+    b.pr();
     b.pr("list                   -- list entities");
     b.pr("details                -- list entities with full detail");
     b.pr("select <label>         -- select entity to be 'active'");
@@ -37,6 +34,7 @@ public class RemoteOper extends AppOper {
     b.pr("delete <label>         -- delete entity");
     b.pr("createimage <imglabel> -- create image from current entity");
     b.pr("images                 -- list images");
+    return b.toString();
   }
 
   @Override
@@ -159,7 +157,12 @@ public class RemoteOper extends AppOper {
     if (h == null)
       setError("no registered handler:", name);
     var mgr = RemoteManager.SHARED_INSTANCE;
-    mgr.infoEdit().activeHandlerName(name);
+    var b = 
+    mgr.infoEdit();
+    b.activeHandlerName(name);
+    // If active entity belongs to a different handler, remove it
+    if (!mgr.activeEntity().host().equals(name)) 
+      b.activeEntity(null);
     mgr.flush();
   }
 
@@ -176,54 +179,6 @@ public class RemoteOper extends AppOper {
     }
     return h;
   }
-
-//  public void createSSHScript(RemoteEntry ent) {
-//    checkArgument(nonEmpty(ent.user()), "no user:", INDENT, ent);
-//    StringBuilder sb = new StringBuilder();
-//    sb.append("#!/usr/bin/env bash\n");
-//    sb.append("echo \"Connecting to: ");
-//    sb.append(ent.name());
-//    sb.append("\"\n");
-//    sb.append("ssh ");
-//    sb.append(ent.user());
-//    sb.append("@");
-//    sb.append(ent.url());
-//    sb.append(" -oStrictHostKeyChecking=no");
-//    sb.append(" $@");
-//    sb.append('\n');
-//    File f = new File(Files.binDirectory(), "sshe");
-//    var fl = Files.S;
-//    fl.writeString(f, sb.toString());
-//    fl.chmod(f, 755);
-//  }
-
-//  public RemoteSettings settings() {
-//    if (mSettings == null) {
-//      mSettings = Files.parseAbstractDataOpt(RemoteSettings.DEFAULT_INSTANCE, settingsFile());
-//      mSettingsModified = false;
-//    }
-//    return mSettings;
-//  }
-
-//  public void flushSettings() {
-//    if (mSettingsModified) {
-//      Files.S.write(settingsFile(), settings());
-//      mSettingsModified = false;
-//    }
-//  }
-//
-//  public RemoteSettings editSettings() {
-//    var r = settings();
-//    mSettingsModified = true;
-//    return r;
-//  }
-//
-//  private File settingsFile() {
-//    return new File(Files.homeDirectory(), ".remote_settings.json");
-//  }
-//
-//  private RemoteSettings mSettings;
-//  private boolean mSettingsModified;
 
   private static Map<String, RemoteHandler> sHandlerMap = hashMap();
 
