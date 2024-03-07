@@ -10,7 +10,6 @@ import java.util.TreeMap;
 import js.base.DateTimeTools;
 import js.base.SystemCall;
 import js.data.DataUtil;
-import js.file.Files;
 import js.json.JSMap;
 import js.webtools.gen.RemoteEntityInfo;
 import remote.gen.KeyPairEntry;
@@ -123,7 +122,7 @@ public class AWSHandler extends RemoteHandler {
     var ent = entityWithName(name);
     checkState(ent != null, "no entity found with name:", name);
 
-    createSSHScript(ent);
+    RemoteUtils.createSSHScript(ent);
 
     todo("Is RemoteEntityInfo extraneous?  Vs RemoteInfo?");
     var b = RemoteEntityInfo.newBuilder();
@@ -135,26 +134,6 @@ public class AWSHandler extends RemoteHandler {
     return b;
   }
 
-  private void createSSHScript(RemoteEntry ent) {
-    todo("This code is duplicated in LinodeHandler");
-    StringBuilder sb = new StringBuilder();
-    sb.append("#!/usr/bin/env bash\n");
-    sb.append("echo \"Connecting to: ");
-    sb.append(ent.name());
-    sb.append("\"\n");
-    sb.append("ssh ");
-    sb.append("root");
-    sb.append("@");
-    sb.append(ent.url());
-    sb.append(" -oStrictHostKeyChecking=no");
-    sb.append(" $@");
-    sb.append('\n');
-    File f = new File(Files.binDirectory(), "sshe");
-    var fl = Files.S;
-    fl.writeString(f, sb.toString());
-    fl.chmod(f, 755);
-  }
-  
   @Override
   public List<KeyPairEntry> keyPairList() {
 

@@ -61,7 +61,7 @@ public class LinodeHandler extends RemoteHandler {
   public RemoteEntityInfo entitySelect(String label) {
     var ent = getLinodeInfo(label, true);
     waitUntilRunning(ent);
-    createSSHScript(ent);
+    RemoteUtils.createSSHScript(ent);
 
     var b = RemoteEntityInfo.newBuilder();
     b.label(label) //
@@ -197,26 +197,6 @@ public class LinodeHandler extends RemoteHandler {
       if (stat.equals("running"))
         break;
     }
-  }
-
-  private void createSSHScript(RemoteEntry ent) {
-    todo("This code is duplicated in AWSHandler");
-    StringBuilder sb = new StringBuilder();
-    sb.append("#!/usr/bin/env bash\n");
-    sb.append("echo \"Connecting to: ");
-    sb.append(ent.name());
-    sb.append("\"\n");
-    sb.append("ssh ");
-    sb.append("root");
-    sb.append("@");
-    sb.append(ent.url());
-    sb.append(" -oStrictHostKeyChecking=no");
-    sb.append(" $@");
-    sb.append('\n');
-    File f = new File(Files.binDirectory(), "sshe");
-    var fl = Files.S;
-    fl.writeString(f, sb.toString());
-    fl.chmod(f, 755);
   }
 
   private JSMap callLinode(String action, String endpoint) {

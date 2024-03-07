@@ -17,6 +17,10 @@ public class RemoteEntry implements AbstractData {
     return mHostInfo;
   }
 
+  public String user() {
+    return mUser;
+  }
+
   @Override
   public Builder toBuilder() {
     return new Builder(this);
@@ -25,6 +29,7 @@ public class RemoteEntry implements AbstractData {
   protected static final String _0 = "name";
   protected static final String _1 = "url";
   protected static final String _2 = "host_info";
+  protected static final String _3 = "user";
 
   @Override
   public String toString() {
@@ -37,6 +42,7 @@ public class RemoteEntry implements AbstractData {
     m.putUnsafe(_0, mName);
     m.putUnsafe(_1, mUrl);
     m.putUnsafe(_2, mHostInfo);
+    m.putUnsafe(_3, mUser);
     return m;
   }
 
@@ -60,6 +66,7 @@ public class RemoteEntry implements AbstractData {
         mHostInfo = x.lock();
       }
     }
+    mUser = m.opt(_3, "root");
   }
 
   public static Builder newBuilder() {
@@ -81,6 +88,8 @@ public class RemoteEntry implements AbstractData {
       return false;
     if (!(mHostInfo.equals(other.mHostInfo)))
       return false;
+    if (!(mUser.equals(other.mUser)))
+      return false;
     return true;
   }
 
@@ -92,6 +101,7 @@ public class RemoteEntry implements AbstractData {
       r = r * 37 + mName.hashCode();
       r = r * 37 + mUrl.hashCode();
       r = r * 37 + mHostInfo.hashCode();
+      r = r * 37 + mUser.hashCode();
       m__hashcode = r;
     }
     return r;
@@ -100,6 +110,7 @@ public class RemoteEntry implements AbstractData {
   protected String mName;
   protected String mUrl;
   protected JSMap mHostInfo;
+  protected String mUser;
   protected int m__hashcode;
 
   public static final class Builder extends RemoteEntry {
@@ -108,6 +119,7 @@ public class RemoteEntry implements AbstractData {
       mName = m.mName;
       mUrl = m.mUrl;
       mHostInfo = m.mHostInfo;
+      mUser = m.mUser;
     }
 
     @Override
@@ -127,6 +139,7 @@ public class RemoteEntry implements AbstractData {
       r.mName = mName;
       r.mUrl = mUrl;
       r.mHostInfo = mHostInfo;
+      r.mUser = mUser;
       return r;
     }
 
@@ -145,6 +158,11 @@ public class RemoteEntry implements AbstractData {
       return this;
     }
 
+    public Builder user(String x) {
+      mUser = (x == null) ? "root" : x;
+      return this;
+    }
+
   }
 
   public static final RemoteEntry DEFAULT_INSTANCE = new RemoteEntry();
@@ -153,6 +171,7 @@ public class RemoteEntry implements AbstractData {
     mName = "";
     mUrl = "";
     mHostInfo = JSMap.DEFAULT_INSTANCE;
+    mUser = "root";
   }
 
 }
