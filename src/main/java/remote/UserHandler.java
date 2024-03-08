@@ -1,0 +1,62 @@
+package remote;
+
+import static js.base.Tools.*;
+
+import java.util.Map;
+
+import js.webtools.RemoteManager;
+import js.webtools.gen.RemoteEntityInfo;
+
+public class UserHandler extends RemoteHandler {
+
+  @Override
+  protected final String supplyName() {
+    return "user";
+  }
+
+  @Override
+  public void entityCreate(String label, String imageLabel) {
+    checkArgument(nullOrEmpty(imageLabel), "images not supported");
+    var ent = getUserEntity(label, false);
+    if (ent != null)
+      badState("entity already exists:", label, INDENT, ent);
+
+    var rec = RemoteEntityInfo.newBuilder().label(label);
+    rec.host(name());
+    var mgr = RemoteManager.SHARED_INSTANCE;
+    mgr.infoEdit().userEntities().put(label, rec.build());
+    mgr.flush();
+  }
+
+  @Override
+  public Map<String, RemoteEntityInfo> entityList() {
+    var mgr = RemoteManager.SHARED_INSTANCE;
+    return mgr.info().userEntities();
+  }
+
+  @Override
+  public void entityDelete(String label) {
+    var ent = getUserEntity(label, true);
+    log("deleting:", label, INDENT, ent);
+    var mgr = RemoteManager.SHARED_INSTANCE;
+    mgr.infoEdit().userEntities().remove(label);
+    mgr.flush();
+  }
+
+  @Override
+  public RemoteEntityInfo entitySelect(String label) {
+    var ent = getUserEntity(label, true);
+    var mgr = RemoteManager.SHARED_INSTANCE;
+    mgr.infoEdit().activeEntity(ent);
+    mgr.createSSHScript();
+    return ent;
+  }
+
+  private RemoteEntityInfo getUserEntity(String label, boolean mustExist) {
+    var info = entityList().get(label);
+    if (mustExist && info == null)
+      badArg("No user entity found with label:", label);
+    return info;
+  }
+
+}

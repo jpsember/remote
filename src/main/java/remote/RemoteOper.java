@@ -9,6 +9,7 @@ import js.app.CmdLineArgs;
 import js.base.BaseObject;
 import js.base.BasePrinter;
 import js.webtools.RemoteManager;
+import remote.gen.RemoteConfig;
 
 public class RemoteOper extends AppOper {
 
@@ -27,6 +28,10 @@ public class RemoteOper extends AppOper {
     var b = new BasePrinter();
     b.pr("manage remote entities, e.g. linode or AWS");
     b.pr();
+    b.pr("remote [user | aws | linode] <cmds>*");
+    b.pr();
+    b.pr("commands:");
+    b.pr("---------------------------------------------------------------");
     b.pr("list                   -- list entities");
     b.pr("details                -- list entities with full detail");
     b.pr("select <label>         -- select entity to be 'active'");
@@ -38,41 +43,21 @@ public class RemoteOper extends AppOper {
   }
 
   @Override
+  public RemoteConfig defaultArgs() {
+    return RemoteConfig.DEFAULT_INSTANCE;
+  }
+
+  @Override
+  public RemoteConfig config() {
+    if (mConfig == null) {
+      mConfig = (RemoteConfig) super.config();
+    }
+    return mConfig;
+  }
+
+  @Override
   public void perform() {
     var mgr = RemoteManager.SHARED_INSTANCE;
-
-    if (false && alert("experiment")) {
-
-      todo("Support selecting an active remote");
-
-      setHandler("aws");
-      var h = handler();
-
-      var instId = "camel";
-
-      if (true) {
-        pr("creating", instId);
-        h.entityCreate(instId, "ami-08f7912c15ca96832");
-      }
-
-      if (false) {
-        pr("deleting", instId);
-        h.entityDelete(instId);
-      }
-
-      if (false) {
-        var pubKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDIdpbQF+FOu0s6OBT0IivYKyjszCPSN9is5IVpBQ6CHX4ZVYeYowhVxLsnwB4RWj/t8sEsQTGqD9V0NscdGongOST6344RcVmAuRYPaOUY9LqqKQnojrYtCWGfMDAmjadtUJqfpxhs2GwFgSS4u9CsATjAhoso5gpk4RdBTJghck1qLGMFeEg0pTUpOJ6Rq8NEjmlLrLVHi1obgLhuZANgqJcNhrfWiUPKQXoMXNXWJDkqMdONxphJe7Fv/y6GRI2tYktElKS68XQ7QVA+/PpNDUcW5KNHS9uf1Az7jb8PuWYzjn6rPpF4O8fnbdxfsK2X1HXN9vn+I8XNS0Mkq/cL Jeff's primary public RSA key";
-        h.importKeyPair("jeff", pubKey);
-      }
-
-      pr("entities:");
-      for (var ent : h.entityList().entrySet()) {
-        pr(ent.getKey(), ":", INDENT, ent.getValue());
-      }
-
-      //  pr("key pairs:", INDENT, h.keyPairList());
-      return;
-    }
 
     var a = cmdLineArgs();
     while (a.hasNextArg()) {
@@ -157,11 +142,10 @@ public class RemoteOper extends AppOper {
     if (h == null)
       setError("no registered handler:", name);
     var mgr = RemoteManager.SHARED_INSTANCE;
-    var b = 
-    mgr.infoEdit();
+    var b = mgr.infoEdit();
     b.activeHandlerName(name);
     // If active entity belongs to a different handler, remove it
-    if (!mgr.activeEntity().host().equals(name)) 
+    if (!mgr.activeEntity().host().equals(name))
       b.activeEntity(null);
     mgr.flush();
   }
@@ -180,6 +164,7 @@ public class RemoteOper extends AppOper {
     return h;
   }
 
+  private RemoteConfig mConfig;
   private static Map<String, RemoteHandler> sHandlerMap = hashMap();
 
   public static void registerHandler(RemoteHandler handler) {
@@ -187,6 +172,7 @@ public class RemoteOper extends AppOper {
   }
 
   static {
+    RemoteOper.registerHandler(new UserHandler());
     RemoteOper.registerHandler(new LinodeHandler());
     RemoteOper.registerHandler(new AWSHandler());
   }
