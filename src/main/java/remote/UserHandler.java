@@ -18,13 +18,39 @@ public class UserHandler extends RemoteHandler {
   public void entityCreate(String label, String imageLabel) {
     checkArgument(nullOrEmpty(imageLabel), "images not supported");
     var ent = getUserEntity(label, false);
-    if (ent != null)
-      badState("entity already exists:", label, INDENT, ent);
+    
+    // We allow create to be called repeatedly on an existing one to modify its parameters
+    //    if (ent != null)
+    //      badState("entity already exists:", label, INDENT, ent);
+    if (ent == null)
+      ent = RemoteEntityInfo.DEFAULT_INSTANCE;
+    var rec = ent.toBuilder();
 
-    var rec = RemoteEntityInfo.newBuilder().label(label);
+    rec.label(label);
     rec.host(name());
+    rec.port(22);
+
+    var c = RemoteOper.SHARED_INSTANCE.cmdLineArgs();
+    while (c.hasNextArg()) {
+      if (c.nextArgIf("port")) {
+        rec.port(Integer.parseInt(c.nextArg()));
+        continue;
+      }
+      if (c.nextArgIf("user")) {
+        rec.user(c.nextArg());
+        continue;
+      }
+      if (c.nextArgIf("url")) {
+        rec.url(c.nextArg());
+        continue;
+      }
+      break;
+    }
+    var b = rec.build();
+    pr(b);
+
     var mgr = RemoteManager.SHARED_INSTANCE;
-    mgr.infoEdit().userEntities().put(label, rec.build());
+    mgr.infoEdit().userEntities().put(label, b);
     mgr.flush();
   }
 
