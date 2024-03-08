@@ -9,7 +9,7 @@ public class Main extends App {
   public static void main(String[] args) {
     loadTools();
     if (false && alert("using experimental args"))
-      args = "details".split(" ");
+      args = "-v delete pi create pi user pi url 10.0.0.88".split(" ");
     Main app = new Main();
     app.startApplication(args);
     app.exitWithReturnCode();

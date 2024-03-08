@@ -96,14 +96,12 @@ public class RemoteOper extends AppOper {
         handler().entityDelete(label);
         if (mgr.info().activeEntity() != null && mgr.info().activeEntity().label().equals(label))
           mgr.infoEdit().activeEntity(null);
-        mgr.flush();
       }
         break;
       case "select": {
         var label = parseLabel(a);
         var info = handler().entitySelect(label);
         mgr.infoEdit().activeEntity(info);
-        mgr.flush();
       }
         break;
       case "createimage": {
@@ -116,6 +114,7 @@ public class RemoteOper extends AppOper {
         break;
       }
     }
+    mgr.flush();
   }
 
   private void showList(boolean detailed) {

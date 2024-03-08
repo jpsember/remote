@@ -22,33 +22,21 @@ public class UserHandler extends RemoteHandler {
     // We allow create to be called repeatedly on an existing one to modify its parameters
     //    if (ent != null)
     //      badState("entity already exists:", label, INDENT, ent);
+    todo("use edit instead of create");
     if (ent == null) {
       ent = RemoteEntityInfo.DEFAULT_INSTANCE.toBuilder().label(label).host(name()).port(22);
     }
     var rec = ent.toBuilder();
-
-    //    rec.label(label);
-    //    rec.host(name());
-
-    //rec.port(22);
-
     var c = RemoteOper.SHARED_INSTANCE.cmdLineArgs();
-    while (c.hasNextArg()) {
-      pr("next arg:", c.peekNextArg(), "rec:", INDENT, rec);
-      if (c.nextArgIf("port")) {
-        rec.port(Integer.parseInt(c.nextArg()));
-        continue;
-      }
-      if (c.nextArgIf("user")) {
-        rec.user(c.nextArg());
-        continue;
-      }
-      if (c.nextArgIf("url")) {
-        rec.url(c.nextArg());
-        continue;
-      }
-      break;
+
+    alert("my prefixes for alerts are not being parsed as expected");
+    todo("!the semantics with cmd line args parsing is confusing...");
+    if (c.hasNextArg()) {
+      rec.port(c.nextArgIf("port", rec.port()));
+      rec.user(c.nextArgIf("user", rec.user()));
+      rec.url(c.nextArgIf("url", rec.url()));
     }
+
     var b = rec.build();
     pr(b);
 
@@ -65,7 +53,10 @@ public class UserHandler extends RemoteHandler {
 
   @Override
   public void entityDelete(String label) {
-    var ent = getUserEntity(label, true);
+    var ent = getUserEntity(label, false);
+    if (ent == null) {
+      return;
+    }
     log("deleting:", label, INDENT, ent);
     var mgr = RemoteManager.SHARED_INSTANCE;
     mgr.infoEdit().userEntities().remove(label);
