@@ -23,7 +23,6 @@ public class UserHandler extends RemoteHandler {
   }
 
   private void update(RemoteEntityInfo.Builder rec) {
-    pr("uypdate:",rec);
     var c = RemoteOper.SHARED_INSTANCE.cmdLineArgs();
     alert("my prefixes for alerts are not being parsed as expected");
     todo("!the semantics with cmd line args parsing is confusing...");
@@ -31,15 +30,12 @@ public class UserHandler extends RemoteHandler {
       rec.port(c.nextArgIf("port", rec.port()));
       rec.user(c.nextArgIf("user", rec.user()));
       rec.url(c.nextArgIf("url", rec.url()));
-      pr("before set project dir:",rec);
       rec.projectDir(c.nextArgIf("project_dir", rec.projectDir()));
-      pr("after set project dir:",rec);
     }
     var b = rec.build();
     pr(b);
     var mgr = RemoteManager.SHARED_INSTANCE;
     mgr.infoEdit().userEntities().put(rec.label(), b);
-    pr("after update:",b);
   }
 
   @Override
@@ -53,9 +49,7 @@ public class UserHandler extends RemoteHandler {
       badState("entity already exists:", label, INDENT, ent);
 
     var b = RemoteEntityInfo.DEFAULT_INSTANCE.toBuilder();
-    pr("entityCreate, label:",label,"b:",b);
     b.label(label).host(name()).port(22).projectDir(new File("/home/" + label));
-    pr("after setting defaults:",b);
     update(b);
   }
 
