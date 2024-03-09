@@ -49,7 +49,7 @@ public class UserHandler extends RemoteHandler {
       badState("entity already exists:", label, INDENT, ent);
 
     var b = RemoteEntityInfo.DEFAULT_INSTANCE.toBuilder();
-    b.label(label).host(name()).port(22).projectDir(new File("/home/" + name()));
+    b.label(label).host(name()).port(22).projectDir(new File("/home/" + label));
     update(b);
   }
 
