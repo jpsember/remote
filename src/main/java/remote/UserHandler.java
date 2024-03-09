@@ -2,6 +2,7 @@ package remote;
 
 import static js.base.Tools.*;
 
+import java.io.File;
 import java.util.Map;
 
 import js.webtools.RemoteManager;
@@ -29,6 +30,7 @@ public class UserHandler extends RemoteHandler {
       rec.port(c.nextArgIf("port", rec.port()));
       rec.user(c.nextArgIf("user", rec.user()));
       rec.url(c.nextArgIf("url", rec.url()));
+      rec.projectDir(c.nextArgIf("project_dir", rec.projectDir()));
     }
     var b = rec.build();
     pr(b);
@@ -47,7 +49,7 @@ public class UserHandler extends RemoteHandler {
       badState("entity already exists:", label, INDENT, ent);
 
     var b = RemoteEntityInfo.DEFAULT_INSTANCE.toBuilder();
-    b.label(label).host(name()).port(22);
+    b.label(label).host(name()).port(22).projectDir(new File("/home/" + name()));
     update(b);
   }
 
