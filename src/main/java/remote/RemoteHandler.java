@@ -31,6 +31,13 @@ public abstract class RemoteHandler extends BaseObject {
     throw notSupported();
   }
 
+  /**
+   * Update a remote entity
+   */
+  public void entityUpdate(String entityName) {
+    throw notSupported();
+  }
+
   public Map<String, RemoteEntityInfo> entityList() {
     throw notSupported();
   }

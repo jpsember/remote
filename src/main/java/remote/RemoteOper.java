@@ -78,12 +78,14 @@ public class RemoteOper extends AppOper {
         if (a.nextArgIf("image")) {
           imageLabel = parseLabel(a);
         }
-
         if (handler().entityList().containsKey(entityLabel))
           setError("entity already exists:", entityLabel);
         handler().entityCreate(entityLabel, imageLabel);
         handler().entitySelect(entityLabel);
       }
+        break;
+      case "update":
+        handler().entityUpdate(parseLabel(a));
         break;
       case "list":
         showList(false);

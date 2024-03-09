@@ -15,20 +15,14 @@ public class UserHandler extends RemoteHandler {
   }
 
   @Override
-  public void entityCreate(String label, String imageLabel) {
-    checkArgument(nullOrEmpty(imageLabel), "images not supported");
-    var ent = getUserEntity(label, false);
-
-    // We allow create to be called repeatedly on an existing one to modify its parameters
-    //    if (ent != null)
-    //      badState("entity already exists:", label, INDENT, ent);
-    todo("use edit instead of create");
-    if (ent == null) {
-      ent = RemoteEntityInfo.DEFAULT_INSTANCE.toBuilder().label(label).host(name()).port(22);
-    }
+  public void entityUpdate(String label) {
+    var ent = getUserEntity(label, true);
     var rec = ent.toBuilder();
-    var c = RemoteOper.SHARED_INSTANCE.cmdLineArgs();
+    update(rec);
+  }
 
+  private void update(RemoteEntityInfo.Builder rec) {
+    var c = RemoteOper.SHARED_INSTANCE.cmdLineArgs();
     alert("my prefixes for alerts are not being parsed as expected");
     todo("!the semantics with cmd line args parsing is confusing...");
     if (c.hasNextArg()) {
@@ -36,13 +30,25 @@ public class UserHandler extends RemoteHandler {
       rec.user(c.nextArgIf("user", rec.user()));
       rec.url(c.nextArgIf("url", rec.url()));
     }
-
     var b = rec.build();
     pr(b);
-
     var mgr = RemoteManager.SHARED_INSTANCE;
-    mgr.infoEdit().userEntities().put(label, b);
-    mgr.flush();
+    mgr.infoEdit().userEntities().put(rec.label(), b);
+  }
+
+  @Override
+  public void entityCreate(String label, String imageLabel) {
+    checkArgument(nullOrEmpty(imageLabel), "images not supported");
+    var ent = getUserEntity(label, false);
+    alert("my prefixes for alerts are not being parsed as expected");
+    todo("!the semantics with cmd line args parsing is confusing...");
+
+    if (ent != null)
+      badState("entity already exists:", label, INDENT, ent);
+
+    var b = RemoteEntityInfo.DEFAULT_INSTANCE.toBuilder();
+    b.label(label).host(name()).port(22);
+    update(b);
   }
 
   @Override
