@@ -27,3 +27,4 @@ _SKIP_*
 # Compile output
 #
 target
+pi_exp/shows
