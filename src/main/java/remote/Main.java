@@ -11,7 +11,7 @@ public class Main extends App {
     Main app = new Main();
     // app.setCustomArgs("user select pi --help");
     // app.setCustomArgs("-v delete pi create pi user pi url 10.0.0.88");
-    // app.setCustomArgs("--help");
+    app.setCustomArgs("--help");
     app.startApplication(args);
     app.exitWithReturnCode();
   }

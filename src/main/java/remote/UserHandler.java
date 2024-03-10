@@ -23,6 +23,7 @@ public class UserHandler extends RemoteHandler {
   }
 
   private void update(RemoteEntityInfo.Builder rec) {
+    todo("we need to document the addtional args port, user, url, etc");
     var c = RemoteOper.SHARED_INSTANCE.cmdLineArgs();
     alert("my prefixes for alerts are not being parsed as expected");
     todo("!the semantics with cmd line args parsing is confusing...");

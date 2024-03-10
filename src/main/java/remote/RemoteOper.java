@@ -24,22 +24,24 @@ public class RemoteOper extends AppOper {
   }
 
   @Override
-  public String getHelpDescription() {
-    var b = new BasePrinter();
-    b.pr("manage remote entities, e.g. linode or AWS");
-    b.pr();
+  protected String getHelpDescription() {
+    return "manage remote entities, e.g. linode, aws, or Raspberry Pi";
+  }
+
+  @Override
+  protected void getOperSpecificHelp(BasePrinter b) {
     b.pr("remote [user | aws | linode] <cmds>*");
-    b.pr();
-    b.pr("commands:");
-    b.pr("---------------------------------------------------------------");
+    b.br();
+    b.pr("cmds is one or more of:").br();
     b.pr("list                   -- list entities");
     b.pr("details                -- list entities with full detail");
     b.pr("select <label>         -- select entity to be 'active'");
     b.pr("create <label>\n" + "   [image <imglabel>]  -- create entity");
+    b.pr("update <label>         -- update entity");
     b.pr("delete <label>         -- delete entity");
     b.pr("createimage <imglabel> -- create image from current entity");
     b.pr("images                 -- list images");
-    return b.toString();
+
   }
 
   @Override
