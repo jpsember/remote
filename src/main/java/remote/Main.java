@@ -9,6 +9,7 @@ public class Main extends App {
   public static void main(String[] args) {
     loadTools();
     Main app = new Main();
+    //app.setCustomArgs("-h");
     app.startApplication(args);
     app.exitWithReturnCode();
   }

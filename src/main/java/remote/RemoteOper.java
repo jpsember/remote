@@ -36,12 +36,11 @@ public class RemoteOper extends AppOper {
     b.pr("list                   -- list entities");
     b.pr("details                -- list entities with full detail");
     b.pr("select <label>         -- select entity to be 'active'");
-    b.pr("create <label>\n" + "   [image <imglabel>]  -- create entity");
-    b.pr("update <label>         -- update entity");
+    b.pr("[create|update]        -- create or update entity\n" //
+        + "                          [port <n> | user <s> | url <s> project_dir <s> | image <s>]");
     b.pr("delete <label>         -- delete entity");
     b.pr("createimage <imglabel> -- create image from current entity");
     b.pr("images                 -- list images");
-
   }
 
   @Override

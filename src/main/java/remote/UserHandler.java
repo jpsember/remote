@@ -43,8 +43,6 @@ public class UserHandler extends RemoteHandler {
   public void entityCreate(String label, String imageLabel) {
     checkArgument(nullOrEmpty(imageLabel), "images not supported");
     var ent = getUserEntity(label, false);
-    alert("my prefixes for alerts are not being parsed as expected");
-    todo("!the semantics with cmd line args parsing is confusing...");
 
     if (ent != null)
       badState("entity already exists:", label, INDENT, ent);
