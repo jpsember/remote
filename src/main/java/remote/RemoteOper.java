@@ -24,12 +24,12 @@ public class RemoteOper extends AppOper {
   }
 
   @Override
-  protected String getHelpDescription() {
+  protected String shortHelp() {
     return "manage remote entities, e.g. linode, aws, or Raspberry Pi";
   }
 
   @Override
-  protected void getOperSpecificHelp(BasePrinter b) {
+  protected void longHelp(BasePrinter b) {
     b.pr("remote [user | aws | linode] <cmds>*");
     b.br();
     b.pr("cmds is one or more of:").br();
