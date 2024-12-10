@@ -9,9 +9,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-
   <build>
     <plugins>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -21,6 +21,8 @@
           <target>11</target>
         </configuration>
       </plugin>
+
+
       <plugin>
       <artifactId>maven-assembly-plugin</artifactId>
       <configuration>
@@ -43,35 +45,39 @@
         </execution>
       </executions>
      </plugin>
-    </plugins>
+
+<!--    <plugin>
+        <groupId>com.googlecode.mavennatives</groupId>
+        <artifactId>maven-nativedependencies-plugin</artifactId>
+    </plugin>
+    -->
+
+  </plugins>
   </build>
 
-  <repositories>
-    <repository>
-      <id>jitpack.io</id>
-      <url>https://jitpack.io</url>
-    </repository>
-  </repositories>
 
   <dependencies>
+
     <dependency>
-      <groupId>com.github.jpsember</groupId>
-      <artifactId>java-core</artifactId>
-      <version>1.3.6</version>
+      <groupId>com.jsbase</groupId>
+      <artifactId>java-webtools</artifactId>
+      <version>3.0</version>
     </dependency>
 
     <dependency>
-      <groupId>com.github.jpsember</groupId>
+      <groupId>com.jsbase</groupId>
       <artifactId>java-testutil</artifactId>
-      <version>1.3.1</version>
+      <version>3.0</version>
+      <scope>test</scope>
     </dependency>
- 
+
     <dependency>
-      <groupId>com.github.jpsember</groupId>
-      <artifactId>java-webtools</artifactId>
-      <version>1.0.3</version>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.6</version>
     </dependency>
 
   </dependencies>
+
 
 </project>
