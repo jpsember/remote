@@ -20,7 +20,7 @@ public class RemoteOper extends AppOper {
 
   @Override
   public String userCommand() {
-    return "";
+    return "remote";
   }
 
   @Override
