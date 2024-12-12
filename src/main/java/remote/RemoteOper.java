@@ -59,10 +59,6 @@ public class RemoteOper extends AppOper {
 
   @Override
   public void perform() {
-    
-    halt("bin dir:",Files.binDirectory());
-    
-    
     var mgr = RemoteManager.SHARED_INSTANCE;
 
     var a = cmdLineArgs();
