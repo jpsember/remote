@@ -8,6 +8,7 @@ import js.app.AppOper;
 import js.app.CmdLineArgs;
 import js.base.BaseObject;
 import js.base.BasePrinter;
+import js.file.Files;
 import js.webtools.RemoteManager;
 import remote.gen.RemoteConfig;
 
@@ -58,6 +59,10 @@ public class RemoteOper extends AppOper {
 
   @Override
   public void perform() {
+    
+    halt("bin dir:",Files.binDirectory());
+    
+    
     var mgr = RemoteManager.SHARED_INSTANCE;
 
     var a = cmdLineArgs();
